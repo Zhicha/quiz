@@ -92,7 +92,7 @@ $value_group = getIdTextField($questionnaire_id, true);
           $limits = $value['limits'];
           $value['limits'] ? $limits = 'из '.$value['limits'].'.' : $limits = '';
           $total = checkLimits($value['ql_id']);
-          if ($point === 'Ваша Фамилия') {
+          if ($point === 'Ваши фамилия и имя') {
            $point = 'Всего';
           }
           echo "<p>{$point}: {$total} чел. {$limits}</p>";
@@ -103,20 +103,20 @@ $value_group = getIdTextField($questionnaire_id, true);
           foreach ($value_text as $key => $value):
           $field = $value[3];
           $value_text = $value[1];
-          if ($prev_field !== $field && $field !== 'Ваша Фамилия') {
+          if ($prev_field !== $field && $field !== 'Ваши фамилия и имя') {
             echo  "<h3>{$field}</h3>";
           }
-          if ($field !== 'Ваша Фамилия') {
+          if ($field !== 'ВВаши фамилия и имя') {
            echo "<p>{$value_text}</p>"; 
           }          
           $prev_field = $field;
           endforeach;
           echo  "<h3>Кто? Что?</h3>";
           foreach ($value_group as $key => $value) {
-            echo '<div> <span>'.$value['Ваша Фамилия'].': </span>';
+            echo '<div> <span>'.$value['Ваши фамилия и имя'].': </span>';
              
             foreach ($value as $key2 => $value2) {
-              if ($key2 !== 'Ваша Фамилия') {
+              if ($key2 !== 'Ваши фамилия и имя') {
                 echo '<span> '.$key2.' - '.$value2.'; </span>'; 
               }              
             }

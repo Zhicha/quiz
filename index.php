@@ -10,59 +10,121 @@ function checkLimits($id) {
     while ($row = $res->fetch_assoc()) $result = $row['count_id'];
     return $result;
 }
+$confirm_data=[];
 if (isset($_POST['sent'])) {
   // Добавляем ответы
   function setQuestionnaireAnswer($answers='') {
     // попробовать через filter_input_array
-    global $db;    
+    global $db;
+
+    $user_exist;
+    $dates_a=[];
+    if ($_POST['9']) {
+      $value_check = strtolower($_POST['9']);
+      $resu = db_query("SELECT qd.value FROM questionnaire_data AS qd WHERE qd.value='$value_check'");
+      while ($row = $resu->fetch_assoc()) $user_exist = $row['value'];
+      if ($user_exist) {
+        echo '<html>
+          <head>
+            <title>Опрос</title>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+            <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+            <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+          </head>
+          <body>
+            <div class="container-sm" style="max-width: 500px;">
+              <div class="row" style="font-size: 1.3em; margin: 25px 15px;">';
+          echo "<h3>Извините вы уже выбрали:</h3>";
+        if (isset($_COOKIE['confirm_data'])) {
+          echo $_COOKIE['confirm_data'];          
+        }
+        echo '<a href="index.php">Вернуться к опросу.</a></div></div></body></html>';              
+        exit();
+      }
+    }
+    
     foreach ($_POST as $key => $value) {
       if ($value) {
         $key = $db->real_escape_string($key);
         $value = $db->real_escape_string($value);
-        $limits;
-        $user_exist;
+        $limits;        
         $value_exist = checkLimits($key);
         if ($key !== 'sent') {
           $res = db_query("SELECT ql.id, ql.limits FROM questionnaire_list AS ql WHERE ql.id='$key'");
           while ($row = $res->fetch_assoc()) $limits = $row['limits'];
-        
-          if ($key === '9') {
-            $resu = db_query("SELECT qd.value FROM questionnaire_data AS qd WHERE qd.value='$value'");
-            while ($row = $resu->fetch_assoc()) $user_exist = $row['value'];
-            if ($user_exist) {
-              echo "Извините вы уже что то выбрали <a href='index.php'>ещё раз</a>.";
-              exit;
-            }
-          }
-            
 
           if ($limits) {
+            $value = strtolower($value);
             if ($limits > 0 && $value_exist < $limits) {
               $insert = db_query("INSERT INTO questionnaire_data (`id_list`, `value`) VALUES ('$key', '$value')");
-              //$update = db_query("UPDATE questionnaire_data SET `value`=`value`+1 WHERE `id_list`='{$key}'");
+              $dates_a[] = $db->insert_id;
             } else {
-              echo "Лимит исчерпан, попытайтесь заполнить <a href='index.php'>ещё раз</a>.";
-              exit;
+              echo '<html>
+              <head>
+                <title>Опрос</title>
+                <meta charset="utf-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1">
+                <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+                <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+                <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+              </head>
+              <body>
+                <div class="container-sm" style="max-width: 500px;">
+                  <div class="row" style="font-size: 1.3em; margin: 25px 15px;">';
+              echo "<h3>Лимит исчерпан, попытайтесь заполнить <a href='index.php'>ещё раз</a>.</h3>";
+              echo '<a href="index.php">Вернуться к опросу.</a></div></div></body></html>';              
+              exit();
             }
           } else {
             $insert = db_query("INSERT INTO questionnaire_data (`id_list`, `value`) VALUES ('$key', '$value')");
-            //$update = db_query("UPDATE questionnaire_data SET `value`=`value`+1 WHERE `id_list`='{$key}'");
-          }
+            $dates_a[] = $db->insert_id;
+          }          
         }
       }
+
     }
+
+    $confirm_data = getQuestionnaireByUser($dates_a);    
+    foreach ($confirm_data as $key => $value) {
+      $text_comfirme .= "<h4>{$key} - {$value}</h4>";
+    }
+    return $text_comfirme;
   }
-  setQuestionnaireAnswer($_POST);
+  
+  $text_comfirme = setQuestionnaireAnswer($_POST);  
 }
 // получаем анкету
 function getQuestionnaire() {
     $result = [];
+    $condition = '1';    
     $res = db_query("SELECT q.id, q.name, q.header, q.comment,
       ql.id AS ql_id, ql.id_blank, ql.name AS ql_name, ql.type, ql.sort, ql.limits, ql.required
       FROM questionnaire AS q
       INNER JOIN questionnaire_list ql ON ql.id_blank = q.id
-      WHERE 1 ORDER BY ql.sort");
+      WHERE $condition ORDER BY ql.sort");
     while ($row = $res->fetch_assoc()) $result[] = $row;
+    return $result;
+}
+
+// data by user
+function getQuestionnaireByUser($dates=[]) {
+    $result = [];
+    $condition = '';
+    foreach ($dates as $key => $value) {
+      if (!empty($condition)) {
+       $condition .= ' OR ';
+      }
+      $condition .= " qd.id={$value} ";
+    }    
+
+    $res = db_query("SELECT qd.id, qd.id_list, qd.value, qd.date,
+      ql.id, ql.id_blank, ql.name
+      FROM questionnaire_data AS qd
+      INNER JOIN questionnaire_list ql ON ql.id = qd.id_list
+      WHERE $condition ORDER BY ql.id DESC");
+    while ($row = $res->fetch_assoc()) $result[$row['name']] = $row['value'];
     return $result;
 }
 
@@ -81,18 +143,15 @@ $comment = $questionnaire[0]['comment'];
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-    <!--<link href="extensions/bootstrap_5.1.3/bootstrap.min.css" rel="stylesheet">
-    <script src="extensions/bootstrap_5.1.3/bootstrap.bundle.min.js"></script>
-    <script src="extensions/jquery_3.6.0/jquery.min.js"></script>-->
   </head>
   <body>
     <div class="container-sm" style="max-width: 500px;">
       <div class="row" style="font-size: 1.3em; margin: 25px 15px;">
         <h1 class="mb-3 text-center"><?php echo $questionnaire_name; ?></h1>
-        <p>Поставьте галочку и нажмите синюю кнопку <b>«ОТПРАВИТЬ»</b>.</p>
-      <?php if (!isset($_POST['sent']) && !isset($_GET['stop'])): 
+        <?php if (!isset($_POST['sent']) && !isset($_GET['stop'])): 
         $ready = false;
-      ?>
+        ?>
+        <p>Поставьте галочку, введите вашу фамилию и имя и нажмите синюю кнопку <b>«ОТПРАВИТЬ»</b>.</p>      
         <form action="index.php" class="was-validated" method="post">
         <?php foreach ($questionnaire as $key => $value):
           $id_ql = $value['ql_id'];
@@ -136,7 +195,7 @@ $comment = $questionnaire[0]['comment'];
         <?php endforeach; ?>
         <input type="hidden" name="sent" value="<?php echo $questionnaire_id; ?>">
         <?php if ($questionnaire_id): ?>
-        <span id="text_error">Выберите блюда и ведите вашу фамилию.</span>
+        <span id="text_error">Выберите блюда и ведите вашу фамилию и имя.</span>
         <button type="submit" class="btn btn-primary btn-lg mt-3" disabled><b>ОТПРАВИТЬ</b></button>
         <?php endif; ?>
       </form>
@@ -144,13 +203,21 @@ $comment = $questionnaire[0]['comment'];
       <?php if (isset($_POST['sent'])): ?>
         <h3>Подождите <span class="spinner-border spinner-border-sm"></span></h3>
         <script>
+        let text_comfirme = '<?php echo $text_comfirme; ?>';        
+        document.cookie = "confirm_data="+text_comfirme+"; max-age=2592000";        
         setTimeout(function () {
           window.location = "index.php?stop";
         }, 1000);
         </script>
       <?php endif; ?>
-      <?php if (isset($_GET['stop'])): ?>
-        <h3>Данные отправлены. Спасибо.</h3>
+      <?php if (isset($_GET['stop'])):?>
+        <h3>Вы выбрали:</h3>
+        <?php        
+        if(isset($_COOKIE['confirm_data'])) {
+          echo $_COOKIE['confirm_data'];
+        }        
+        ?>
+        <h4>Спасибо</h4>
         <h6><a href="index.php">Вернуться к опросу.</h6>
       <?php endif; ?>
       </div>
@@ -168,29 +235,37 @@ $comment = $questionnaire[0]['comment'];
         if ($(this).val() && $(this).attr("placeholder") === "Другое") {
           check++;
         }
-        if ($(this).val() && $(this).attr("placeholder") === "Ваша Фамилия") {
+        if ($(this).val() && $(this).attr("placeholder") === "Ваши фамилия и имя") {
           check_name++;
         }
       }      
     });
     if (check === 0 || check_name === 0) {
       $(".btn-primary").attr("disabled", true);
-      $("#text_error").text("Выберите блюда и ведите вашу фамилию.");
+      $("#text_error").text("Выберите блюда и ведите вашу фамилию и имя.");
     } else {
       $(".btn-primary").attr("disabled", false);
       $("#text_error").text("");
     }
   }
-  $("input").change(function () {
+  $("input[type='checkbox']").change(function () {
     check_field_value();
     if ($(this).prop("checked")) {
       $("input[type='checkbox']").prop("disabled", true);
       $(this).prop("disabled", false);
     } else {
-      $("input[type='checkbox']").prop("disabled", false);
+      $("input[type='checkbox']").each(function () {
+        console.log($(this).next().next().text());
+        if ($(this).next().next().text() === "Нужное количество набрано.") {
+          $(this).prop("disabled", true);
+        } else {
+          $(this).prop("disabled", false);
+        }
+      });
+      //$("input[type='checkbox']").prop("disabled", false);
     }
   });
-  $("input").keyup(function () {
+  $("input[type='text']").keyup(function () {
     check_field_value();
   });
     // Проверка при отправки формы на лимит
