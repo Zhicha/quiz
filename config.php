@@ -4,7 +4,7 @@
 
     // establish mySQLi connection & database selection
     $host = $_SERVER['HTTP_HOST'];
-    $db = new mysqli('localhost', "u0654_feast", "Iz7g5^t0","u0654376_quiz");    
+    $db = new mysqli('localhost', "", "","");    
 
     // db query settings
     $db->set_charset('utf8');
