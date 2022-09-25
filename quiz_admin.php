@@ -106,7 +106,7 @@ $value_group = getIdTextField($questionnaire_id, true);
           if ($prev_field !== $field && $field !== 'Ваши фамилия и имя') {
             echo  "<h3>{$field}</h3>";
           }
-          if ($field !== 'ВВаши фамилия и имя') {
+          if ($field !== 'Ваши фамилия и имя') {
            echo "<p>{$value_text}</p>"; 
           }          
           $prev_field = $field;

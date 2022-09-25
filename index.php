@@ -195,7 +195,7 @@ $comment = $questionnaire[0]['comment'];
         <?php endforeach; ?>
         <input type="hidden" name="sent" value="<?php echo $questionnaire_id; ?>">
         <?php if ($questionnaire_id): ?>
-        <span id="text_error">Выберите блюда и ведите вашу фамилию и имя.</span>
+        <span id="text_error">Выберите блюда и введите вашу фамилию и имя.</span>
         <button type="submit" class="btn btn-primary btn-lg mt-3" disabled><b>ОТПРАВИТЬ</b></button>
         <?php endif; ?>
       </form>
@@ -242,7 +242,7 @@ $comment = $questionnaire[0]['comment'];
     });
     if (check === 0 || check_name === 0) {
       $(".btn-primary").attr("disabled", true);
-      $("#text_error").text("Выберите блюда и ведите вашу фамилию и имя.");
+      $("#text_error").text("Выберите блюда и введите вашу фамилию и имя.");
     } else {
       $(".btn-primary").attr("disabled", false);
       $("#text_error").text("");
@@ -274,6 +274,9 @@ $comment = $questionnaire[0]['comment'];
       check_field_value();
     }
   });
+
+  $("#input9").parent().prev().addClass("mt-4");
+  $("#input9").parent().prev().addClass("mb-1");
   
   </script>
   <style>
